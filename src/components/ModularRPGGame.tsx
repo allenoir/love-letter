@@ -828,7 +828,7 @@ const ModularRPGGame = () => {
 
         {/* Keyboard Controls Info */}
         <div className="bg-slate-800 p-3 rounded-lg text-center text-sm">
-          <span className="text-yellow-400">Keyboard:</span> WASD/Arrows to move • SPACE/E to interact
+          <span className="text-yellow-400">Keyboard:</span> WASD/Arrows to move • E to interact
         </div>
       </div>
 
