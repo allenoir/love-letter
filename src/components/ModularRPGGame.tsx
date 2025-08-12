@@ -28,16 +28,6 @@ interface GameState {
   stats: GameStats;
 }
 
-// interface InteractionResult {
-//   message: string;
-//   action?: {
-//     type: string;
-//     mapId?: string;
-//     position?: Position;
-//     stats?: Partial<GameStats>;
-//   };
-// }
-
 interface MapObject {
   type: string;
   sprite: string;
@@ -58,10 +48,9 @@ interface MapData {
 type Direction = 'up' | 'down' | 'left' | 'right';
 
 // ==============================================
-// GAME CONFIGURATION & DATA STRUCTURES
+// PLAYER CONFIG
 // ==============================================
 
-// Player configuration
 const PLAYER_CONFIG = {
   startingLevel: 1,
   startingPosition: { x: 3, y: 3 },
@@ -69,7 +58,10 @@ const PLAYER_CONFIG = {
   name: 'Wizard'
 };
 
-// Map definitions - Easy to add new maps here
+// ==============================================
+// MAP DATA (same as before — omitted here for brevity)
+// ==============================================
+
 const MAPS: Record<string, MapData> = {
   village: {
     name: 'Village',
@@ -554,7 +546,6 @@ const MAPS: Record<string, MapData> = {
 // ==============================================
 
 const ModularRPGGame = () => {
-  // Game state
   const [currentMap, setCurrentMap] = useState('village');
   const [playerPos, setPlayerPos] = useState(PLAYER_CONFIG.startingPosition);
   const [playerLevel] = useState(PLAYER_CONFIG.startingLevel);
@@ -568,32 +559,38 @@ const ModularRPGGame = () => {
     gold: 0
   });
 
+  const [tileSize, setTileSize] = useState(() =>
+    window.innerWidth < 640 ? 28 : 40
+  );
+
+  // Responsive tile size update on resize
+  useEffect(() => {
+    const handleResize = () => {
+      setTileSize(window.innerWidth < 640 ? 28 : 40);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   const currentMapData = MAPS[currentMap];
-  const tileSize = 40;
 
   // ==============================================
   // INTERACTION SYSTEM
   // ==============================================
-  
+
   const handleInteraction = useCallback(() => {
     const objectKey = `${playerPos.x},${playerPos.y}`;
     const object = currentMapData.objects[objectKey];
-    
+
     if (object && object.onInteract) {
-      const result = object.onInteract({ 
-        level: playerLevel, 
-        position: playerPos,
-        stats: gameStats 
-      }, {
-        currentMap,
-        mapData: currentMapData,
-        stats: gameStats
-      });
-      
+      const result = object.onInteract(
+        { level: playerLevel, position: playerPos, stats: gameStats },
+        { currentMap, mapData: currentMapData, stats: gameStats }
+      );
+
       setMessage(result.message);
       setShowMessage(true);
-      
-      // Handle special actions
+
       if (result.action) {
         setTimeout(() => {
           switch (result.action.type) {
@@ -623,78 +620,62 @@ const ModularRPGGame = () => {
   // ==============================================
   // MOVEMENT SYSTEM
   // ==============================================
-  
-  const handleKeyPress = useCallback((e: KeyboardEvent) => {
-    if (showMessage || showThemeMenu) return;
-    
-    setPlayerPos(prev => {
-      let newX = prev.x;
-      let newY = prev.y;
-      
-      switch(e.key.toLowerCase()) {
-        case 'w':
-          newY = Math.max(0, prev.y - 1);
-          break;
-        case 's':
-          newY = Math.min(currentMapData.height - 1, prev.y + 1);
-          break;
-        case 'a':
-          newX = Math.max(0, prev.x - 1);
-          break;
-        case 'd':
-          newX = Math.min(currentMapData.width - 1, prev.x + 1);
-          break;
-        case 'e':
-          e.preventDefault();
-          handleInteraction();
-          return prev;
-        default:
-          return prev;
-      }
-      
-      return { x: newX, y: newY };
-    });
-  }, [showMessage, showThemeMenu, currentMapData, handleInteraction]);
+
+  const handleKeyPress = useCallback(
+    (e: KeyboardEvent) => {
+      if (showMessage || showThemeMenu) return;
+
+      setPlayerPos(prev => {
+        let newX = prev.x;
+        let newY = prev.y;
+
+        switch (e.key.toLowerCase()) {
+          case 'w':
+            newY = Math.max(0, prev.y - 1);
+            break;
+          case 's':
+            newY = Math.min(currentMapData.height - 1, prev.y + 1);
+            break;
+          case 'a':
+            newX = Math.max(0, prev.x - 1);
+            break;
+          case 'd':
+            newX = Math.min(currentMapData.width - 1, prev.x + 1);
+            break;
+          case 'e':
+            e.preventDefault();
+            handleInteraction();
+            return prev;
+          default:
+            return prev;
+        }
+
+        return { x: newX, y: newY };
+      });
+    },
+    [showMessage, showThemeMenu, currentMapData, handleInteraction]
+  );
 
   useEffect(() => {
     window.addEventListener('keydown', handleKeyPress);
     return () => window.removeEventListener('keydown', handleKeyPress);
   }, [handleKeyPress]);
 
-  // ==============================================
-  // UI HANDLERS
-  // ==============================================
-
   const handleDPadMove = (direction: Direction) => {
     if (showMessage || showThemeMenu) return;
-    
+
     const directionMap: Record<Direction, Position> = {
-      'up': { x: 0, y: -1 },
-      'down': { x: 0, y: 1 },
-      'left': { x: -1, y: 0 },
-      'right': { x: 1, y: 0 }
+      up: { x: 0, y: -1 },
+      down: { x: 0, y: 1 },
+      left: { x: -1, y: 0 },
+      right: { x: 1, y: 0 }
     };
-    
+
     const move = directionMap[direction];
     setPlayerPos(prev => ({
       x: Math.max(0, Math.min(currentMapData.width - 1, prev.x + move.x)),
       y: Math.max(0, Math.min(currentMapData.height - 1, prev.y + move.y))
     }));
-  };
-
-  const closeMessage = () => {
-    setShowMessage(false);
-    setMessage('');
-  };
-
-  const closeThemeMenu = () => {
-    setShowThemeMenu(false);
-  };
-
-  const selectTheme = (themeId: string) => {
-    setCurrentMap(themeId);
-    setPlayerPos({ x: 1, y: 3 });
-    closeThemeMenu();
   };
 
   // ==============================================
@@ -708,21 +689,24 @@ const ModularRPGGame = () => {
         const isPlayer = playerPos.x === x && playerPos.y === y;
         const objectKey = `${x},${y}`;
         const object = currentMapData.objects[objectKey];
-        
+
         let tileContent = '';
         let tileClass = `${currentMapData.tileClass} border`;
-        
+
         if (isPlayer) {
           tileContent = PLAYER_CONFIG.sprite;
-          tileClass = `${currentMapData.tileClass.replace('200', '300').replace('300', '400')} border`;
+          tileClass = `${currentMapData.tileClass.replace(
+            '200',
+            '300'
+          ).replace('300', '400')} border`;
         } else if (object) {
           tileContent = object.sprite;
         }
-        
+
         tiles.push(
           <div
             key={`${x}-${y}`}
-            className={`${tileClass} flex items-center justify-center text-2xl cursor-pointer hover:brightness-110 transition-all duration-150`}
+            className={`${tileClass} flex items-center justify-center text-xl sm:text-2xl cursor-pointer hover:brightness-110 transition-all duration-150`}
             style={{
               width: tileSize,
               height: tileSize,
@@ -745,22 +729,38 @@ const ModularRPGGame = () => {
     className?: string;
   }
 
-  const DPadButton: React.FC<DPadButtonProps> = ({ direction, children, className = "" }) => (
+  const DPadButton: React.FC<DPadButtonProps> = ({
+    direction,
+    children,
+    className = ''
+  }) => (
     <button
       onMouseDown={() => handleDPadMove(direction)}
-      className={`bg-gray-700 text-white p-3 rounded-lg shadow-lg hover:bg-gray-600 active:bg-gray-800 transition-colors select-none ${className}`}
+      className={`bg-gray-700 text-white ${
+        window.innerWidth < 640 ? 'p-4 text-lg' : 'p-3'
+      } rounded-lg shadow-lg hover:bg-gray-600 active:bg-gray-800 transition-colors select-none ${className}`}
       style={{ userSelect: 'none' }}
     >
       {children}
     </button>
   );
 
+    const closeThemeMenu = () => {
+    setShowThemeMenu(false);
+  };
+
+  
+  const selectTheme = (themeId: string) => {
+    setCurrentMap(themeId);
+    setPlayerPos({ x: 1, y: 3 });
+    closeThemeMenu();
+  };
+
   return (
-    <div className="flex flex-col lg:flex-row gap-4 p-4 bg-slate-900 min-h-screen text-white">
-      
-      {/* Left Sidebar - Game Info */}
-      <div className="lg:w-64 space-y-4">
-        {/* Player Stats */}
+    <div className="flex flex-col lg:flex-row gap-4 p-2 sm:p-4 bg-slate-900 min-h-screen text-white">
+      {/* Sidebar Left */}
+      <div className="w-full lg:w-64 space-y-4">
+        {/* Player Info */}
         <div className="bg-slate-800 p-4 rounded-lg">
           <h3 className="text-lg font-bold mb-3 text-blue-400">Player Info</h3>
           <div className="space-y-2 text-sm">
@@ -784,7 +784,7 @@ const ModularRPGGame = () => {
           </div>
         </div>
 
-        {/* Quick Map Selector */}
+        {/* Quick Travel */}
         <div className="bg-slate-800 p-4 rounded-lg">
           <h3 className="text-lg font-bold mb-3 text-purple-400">Quick Travel</h3>
           <div className="space-y-2">
@@ -795,9 +795,9 @@ const ModularRPGGame = () => {
                   setCurrentMap(mapId);
                   setPlayerPos(PLAYER_CONFIG.startingPosition);
                 }}
-                className={`w-full p-2 rounded text-sm transition-colors ${
-                  currentMap === mapId 
-                    ? 'bg-purple-600 text-white' 
+                className={`w-full p-3 sm:p-2 rounded text-sm transition-colors ${
+                  currentMap === mapId
+                    ? 'bg-purple-600 text-white'
                     : 'bg-slate-700 hover:bg-slate-600'
                 }`}
               >
@@ -808,41 +808,41 @@ const ModularRPGGame = () => {
         </div>
       </div>
 
-      {/* Center - Game Map */}
+      {/* Map Center */}
       <div className="flex-1 flex flex-col items-center">
-        <h1 className="text-3xl font-bold mb-4 text-cyan-400">
-        {currentMapData.name}
+        <h1 className="text-2xl sm:text-3xl font-bold mb-4 text-cyan-400">
+          {currentMapData.name}
         </h1>
-        
-        <div 
+
+        <div
           className={`relative ${currentMapData.backgroundColor} border-4 border-slate-600 rounded-lg shadow-2xl mb-4`}
           style={{
             display: 'grid',
-            gridTemplateColumns: `repeat(${currentMapData.width}, ${tileSize}px)`,
-            gridTemplateRows: `repeat(${currentMapData.height}, ${tileSize}px)`,
-            gap: '1px'
+            gridTemplateColumns: `repeat(${currentMapData.width}, minmax(${tileSize}px, 1fr))`,
+            gridTemplateRows: `repeat(${currentMapData.height}, minmax(${tileSize}px, 1fr))`,
+            gap: '1px',
+            maxWidth: '100%',
+            overflow: 'hidden'
           }}
         >
           {renderMap()}
         </div>
 
-        {/* Keyboard Controls Info */}
-        <div className="bg-slate-800 p-3 rounded-lg text-center text-sm">
+        <div className="bg-slate-800 p-3 rounded-lg text-center text-xs sm:text-sm">
           <span className="text-yellow-400">Keyboard:</span> WASD/Arrows to move • E to interact
         </div>
       </div>
 
-      {/* Right Sidebar - Touch Controls */}
-      <div className="lg:w-64 space-y-4">
-        {/* D-Pad Controls */}
+      {/* Sidebar Right */}
+      <div className="w-full lg:w-64 space-y-4">
+        {/* D-Pad */}
         <div className="bg-slate-800 p-4 rounded-lg">
-          {/* D-Pad */}
           <div className="grid grid-cols-3 gap-2 mb-4">
             <div></div>
             <DPadButton direction="up">↑</DPadButton>
             <div></div>
             <DPadButton direction="left">←</DPadButton>
-            <div className="bg-slate-700 p-3 rounded-lg flex items-center justify-center text-2xl">
+            <div className="bg-slate-700 p-3 rounded-lg flex items-center justify-center text-xl sm:text-2xl">
               🎮
             </div>
             <DPadButton direction="right">→</DPadButton>
@@ -850,19 +850,17 @@ const ModularRPGGame = () => {
             <DPadButton direction="down">↓</DPadButton>
             <div></div>
           </div>
-
-          {/* Action Buttons */}
           <div className="space-y-2">
             <button
               onClick={handleInteraction}
-              className="w-full bg-yellow-600 text-white p-3 rounded-lg shadow-lg hover:bg-yellow-500 active:bg-yellow-700 transition-colors font-bold"
+              className="w-full bg-yellow-600 text-white p-4 sm:p-3 rounded-lg shadow-lg hover:bg-yellow-500 active:bg-yellow-700 transition-colors font-bold"
             >
               INTERACT
             </button>
           </div>
         </div>
 
-        {/* Development Guide */}
+        {/* Dev Guide */}
         <div className="bg-slate-800 p-4 rounded-lg text-xs">
           <h3 className="text-sm font-bold mb-2 text-cyan-400">Dev Guide</h3>
           <div className="space-y-1 text-slate-400">
@@ -881,7 +879,10 @@ const ModularRPGGame = () => {
           <div className="bg-slate-800 border border-slate-600 p-6 rounded-lg shadow-2xl max-w-md mx-4">
             <div className="mb-4 text-lg text-white">{message}</div>
             <button
-              onClick={closeMessage}
+              onClick={() => {
+                setShowMessage(false);
+                setMessage('');
+              }}
               className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-500 transition-colors w-full font-bold"
             >
               Continue
@@ -890,8 +891,8 @@ const ModularRPGGame = () => {
         </div>
       )}
 
-      {/* Theme Portal Menu */}
-      {showThemeMenu && (
+      {/* Theme Menu */}
+     {showThemeMenu && (
         <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
           <div className="bg-slate-800 border border-slate-600 p-6 rounded-lg shadow-2xl max-w-2xl w-full mx-4">
             <h2 className="text-2xl font-bold mb-6 text-center text-purple-400">Choose a Theme</h2>
