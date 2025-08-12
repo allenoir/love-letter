@@ -17,7 +17,7 @@ const SidebarRight: React.FC = () => {
         onClick={() => setIsCollapsed(false)}
         className="fixed top-2 right-2 bg-slate-800 p-2 rounded-lg z-10"
       >
-          ✕
+        ✕
       </button>
     );
   }
@@ -35,12 +35,17 @@ const SidebarRight: React.FC = () => {
           onClick={() => setIsCollapsed(true)}
           className="absolute top-2 left-2 bg-slate-700 p-2 rounded-lg"
         >
-        🎮
+          🎮
         </button>
       )}
-      <div className="flex-1 flex flex-col items-center min-h-0">
-      {isMobile && <MapGrid currentMapData={currentMapData} />}
-      </div>
+      {isMobile && (
+        <div className="flex-1 flex flex-col items-center min-h-0">
+          <h1 className="text-2xl sm:text-3xl font-bold mb-4 text-cyan-400">
+            {currentMapData.name}
+          </h1>
+          <MapGrid currentMapData={currentMapData} />
+        </div>
+      )}
 
       <div className="bg-slate-800 p-4 rounded-lg">
         <div className="grid grid-cols-3 gap-2 mb-4">
