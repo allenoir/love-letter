@@ -1,5 +1,5 @@
 import './App.css'
-import ModularRPGGame from './components/ModularRPGGame'
+import ModularRPGGame from './components/ModularRPGGame/ModularRPGGame'
 
 function App() {
   return (
