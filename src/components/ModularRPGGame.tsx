@@ -632,23 +632,18 @@ const ModularRPGGame = () => {
       let newY = prev.y;
       
       switch(e.key.toLowerCase()) {
-        case 'arrowup':
         case 'w':
           newY = Math.max(0, prev.y - 1);
           break;
-        case 'arrowdown':
         case 's':
           newY = Math.min(currentMapData.height - 1, prev.y + 1);
           break;
-        case 'arrowleft':
         case 'a':
           newX = Math.max(0, prev.x - 1);
           break;
-        case 'arrowright':
         case 'd':
           newX = Math.min(currentMapData.width - 1, prev.x + 1);
           break;
-        case ' ':
         case 'e':
           e.preventDefault();
           handleInteraction();
